@@ -1,17 +1,54 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Mic, MicOff, Volume2, MessageCircle, BarChart3, TrendingUp, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Mic, 
+  MicOff, 
+  Volume2, 
+  MessageCircle, 
+  BarChart3, 
+  TrendingUp, 
+  Calendar,
+  Send,
+  Bot,
+  User,
+  Headphones,
+  Languages
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: Date;
+  language: string;
+}
 
 const VoiceAssistant = () => {
   const [isListening, setIsListening] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [currentQuery, setCurrentQuery] = useState("");
   const [response, setResponse] = useState("");
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: "नमस्ते! मैं आपका AI असिस्टेंट हूं। आप अपने खर्च, रसीदों और बजट के बारे में किसी भी भाषा में पूछ सकते हैं।",
+      role: 'assistant',
+      timestamp: new Date(),
+      language: 'hindi'
+    }
+  ]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -87,12 +124,12 @@ const VoiceAssistant = () => {
       setTimeout(() => {
         setIsListening(false);
         setCurrentQuery(suggestions[selectedLanguage as keyof typeof suggestions][0]);
-        handleQuery(suggestions[selectedLanguage as keyof typeof suggestions][0]);
+        handleQuery(suggestions[selectedLanguage as keyof typeof suggestions][0], true);
       }, 3000);
     }
   };
 
-  const handleQuery = (query: string) => {
+  const handleQuery = (query: string, isVoice = false) => {
     setCurrentQuery(query);
     const lang = selectedLanguage as keyof typeof mockResponses;
     let responseKey = "spending";
@@ -105,197 +142,365 @@ const VoiceAssistant = () => {
       responseKey = "average";
     }
     
+    if (!isVoice) {
+      // Add user message to chat
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: query,
+        role: 'user',
+        timestamp: new Date(),
+        language: selectedLanguage
+      };
+      setMessages(prev => [...prev, userMessage]);
+    }
+    
     setTimeout(() => {
-      setResponse(mockResponses[lang][responseKey as keyof typeof mockResponses[typeof lang]]);
+      const responseContent = mockResponses[lang][responseKey as keyof typeof mockResponses[typeof lang]];
+      setResponse(responseContent);
+      
+      if (!isVoice) {
+        // Add assistant response to chat
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: responseContent,
+          role: 'assistant',
+          timestamp: new Date(),
+          language: selectedLanguage
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setChatInput("");
+      }
     }, 1000);
+  };
+
+  const handleChatSend = () => {
+    if (!chatInput.trim()) return;
+    handleQuery(chatInput, false);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    handleQuery(suggestion, true);
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">Voice Assistant</span>
+      <header className="border-b bg-card/50 backdrop-blur-sm p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-primary to-finance flex items-center justify-center">
+              <Headphones className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">🎙️ AI Voice Assistant</h1>
+              <p className="text-sm text-muted-foreground">Voice & chat support in multiple languages</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Dashboard
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant="success" className="flex items-center gap-1">
+              <Languages className="h-3 w-3" />
+              Multi-language
+            </Badge>
+          </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-4">🎙️ AI Voice Assistant</h1>
-          <p className="text-muted-foreground">
-            Ask questions about your spending, returns, and budgets in your preferred language
-          </p>
-        </div>
+      <div className="p-6">
+        <Tabs defaultValue="voice" className="max-w-6xl mx-auto">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="voice" className="flex items-center gap-2">
+              <Mic className="h-4 w-4" />
+              Voice Mode
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Chat Mode
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Voice Interface */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Language Selector */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Language / भाषा चुनें</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map(lang => (
-                      <SelectItem key={lang.value} value={lang.value}>
-                        <span className="flex items-center gap-2">
-                          <span>{lang.flag}</span>
-                          <span>{lang.label}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+          <TabsContent value="voice" className="space-y-6">
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Voice Interface */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Language Selector */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Select Language / भाषा चुनें</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {languages.map(lang => (
+                          <SelectItem key={lang.value} value={lang.value}>
+                            <span className="flex items-center gap-2">
+                              <span>{lang.flag}</span>
+                              <span>{lang.label}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
 
-            {/* Voice Input */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Voice Input</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="mb-6">
-                  <Button
-                    variant={isListening ? "destructive" : "gradient"}
-                    size="lg"
-                    className="h-24 w-24 rounded-full"
-                    onClick={handleVoiceToggle}
-                  >
-                    {isListening ? (
-                      <MicOff className="h-8 w-8" />
-                    ) : (
-                      <Mic className="h-8 w-8" />
+                {/* Voice Input */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Voice Input</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <div className="mb-6">
+                      <Button
+                        variant={isListening ? "destructive" : "gradient"}
+                        size="lg"
+                        className="h-24 w-24 rounded-full"
+                        onClick={handleVoiceToggle}
+                      >
+                        {isListening ? (
+                          <MicOff className="h-8 w-8" />
+                        ) : (
+                          <Mic className="h-8 w-8" />
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {isListening ? "Listening... Speak now" : "Click to start voice input"}
+                    </p>
+
+                    {currentQuery && (
+                      <div className="p-4 bg-muted/30 rounded-lg mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageCircle className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">Your Query:</span>
+                        </div>
+                        <p className="text-sm">{currentQuery}</p>
+                      </div>
                     )}
-                  </Button>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-4">
-                  {isListening ? "Listening... Speak now" : "Click to start voice input"}
-                </p>
 
-                {currentQuery && (
-                  <div className="p-4 bg-muted/30 rounded-lg mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageCircle className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Your Query:</span>
+                    {response && (
+                      <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Volume2 className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm text-primary">AI Response:</span>
+                        </div>
+                        <p className="text-sm">{response}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Stats Sidebar */}
+              <div className="space-y-6">
+                {/* Quick Suggestions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>💡 Quick Questions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {suggestions[selectedLanguage as keyof typeof suggestions].map((suggestion, index) => (
+                        <Button
+                          key={index}
+                          variant="ghost"
+                          className="w-full text-left h-auto p-3 justify-start"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          <span className="text-sm leading-relaxed">{suggestion}</span>
+                        </Button>
+                      ))}
                     </div>
-                    <p className="text-sm">{currentQuery}</p>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
 
-                {response && (
-                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Volume2 className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm text-primary">AI Response:</span>
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📊 Quick Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-primary" />
+                        <span className="text-sm">This Week</span>
+                      </div>
+                      <Badge variant="secondary">₹5,612</Badge>
                     </div>
-                    <p className="text-sm">{response}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-success" />
+                        <span className="text-sm">Monthly Avg</span>
+                      </div>
+                      <Badge variant="secondary">₹18,500</Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-warning" />
+                        <span className="text-sm">Return Items</span>
+                      </div>
+                      <Badge variant="warning">2 pending</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
 
-          {/* Suggestions & Analytics */}
-          <div className="space-y-6">
-            {/* Quick Suggestions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>💡 Quick Questions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {suggestions[selectedLanguage as keyof typeof suggestions].map((suggestion, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      className="w-full text-left h-auto p-3 justify-start"
-                      onClick={() => handleQuery(suggestion)}
-                    >
-                      <span className="text-sm leading-relaxed">{suggestion}</span>
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="chat" className="space-y-6">
+            {/* Chat Interface */}
+            <div className="grid lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <Card className="h-[600px] flex flex-col">
+                  <CardHeader className="border-b">
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="h-5 w-5 text-primary" />
+                      Chat Assistant
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  {/* Messages */}
+                  <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex items-start gap-3 ${
+                            message.role === 'user' ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          {message.role === 'assistant' && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary text-white">
+                                <Bot className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              message.role === 'user'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs opacity-70">
+                                {message.timestamp.toLocaleTimeString()}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {message.language}
+                              </Badge>
+                            </div>
+                          </div>
 
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>📊 Quick Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-primary" />
-                    <span className="text-sm">This Week</span>
-                  </div>
-                  <Badge variant="secondary">₹5,612</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-success" />
-                    <span className="text-sm">Monthly Avg</span>
-                  </div>
-                  <Badge variant="secondary">₹18,500</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-warning" />
-                    <span className="text-sm">Return Items</span>
-                  </div>
-                  <Badge variant="warning">2 pending</Badge>
-                </div>
-              </CardContent>
-            </Card>
+                          {message.role === 'user' && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-finance text-white">
+                                <User className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
 
-            {/* Language Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle>🌐 Language Support</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm">Voice Recognition</span>
+                  {/* Chat Input */}
+                  <div className="border-t p-4">
+                    <div className="flex gap-2">
+                      <Input
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={`Type your message in ${languages.find(l => l.value === selectedLanguage)?.label}...`}
+                        onKeyPress={(e) => e.key === 'Enter' && handleChatSend()}
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={handleChatSend}
+                        disabled={!chatInput.trim()}
+                        size="icon"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm">Text-to-Speech</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm">Smart Context Understanding</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm">Multi-language Analytics</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                </Card>
+              </div>
+
+              {/* Chat Suggestions */}
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Language Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {languages.map(lang => (
+                          <SelectItem key={lang.value} value={lang.value}>
+                            <span className="flex items-center gap-2">
+                              <span>{lang.flag}</span>
+                              <span className="text-xs">{lang.label}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Quick Chat Options</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {suggestions[selectedLanguage as keyof typeof suggestions].slice(0, 3).map((suggestion, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-left h-auto p-2 justify-start text-xs"
+                        onClick={() => {
+                          setChatInput(suggestion);
+                          handleChatSend();
+                        }}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-finance/10 border-finance/20">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Languages className="h-4 w-4 text-finance" />
+                        <span className="font-medium text-sm">Multi-language Support</span>
+                      </div>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• Real-time translation</li>
+                        <li>• Voice recognition</li>
+                        <li>• Cultural context aware</li>
+                        <li>• Local financial terms</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
