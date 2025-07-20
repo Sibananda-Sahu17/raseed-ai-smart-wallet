@@ -7,7 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Camera, 
   Upload, 
-  Video, 
   FileImage, 
   CheckCircle, 
   X,
@@ -21,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CapturedFile {
   id: string;
-  type: 'image' | 'video';
+  type: 'image';
   url: string;
   name: string;
   size: number;
@@ -112,11 +111,11 @@ const CameraCapture = () => {
     const files = Array.from(event.target.files || []);
     
     files.forEach(file => {
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      if (file.type.startsWith('image/')) {
         const url = URL.createObjectURL(file);
         const newFile: CapturedFile = {
           id: Date.now().toString() + Math.random(),
-          type: file.type.startsWith('image/') ? 'image' : 'video',
+          type: 'image',
           url,
           name: file.name,
           size: file.size,
@@ -127,8 +126,8 @@ const CameraCapture = () => {
     });
 
     toast({
-      title: "Files Uploaded!",
-      description: `${files.length} file(s) uploaded successfully.`,
+      title: "Photo Uploaded!",
+      description: `${files.length} photo(s) uploaded successfully.`,
     });
   };
 
@@ -180,7 +179,7 @@ const CameraCapture = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">📸 Capture & Upload Receipts</h1>
           <p className="text-muted-foreground">
-            Take photos, record videos, or upload files of your receipts for AI analysis
+            Take photos or upload receipt images for AI analysis
           </p>
         </div>
 
@@ -263,14 +262,13 @@ const CameraCapture = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="space-y-4">
-                    <div className="flex justify-center gap-4">
+                    <div className="flex justify-center">
                       <FileImage className="h-8 w-8 text-primary" />
-                      <Video className="h-8 w-8 text-finance" />
                     </div>
                     <div>
-                      <p className="font-medium mb-1">Click to upload files</p>
+                      <p className="font-medium mb-1">Click to upload photos</p>
                       <p className="text-sm text-muted-foreground">
-                        Supports JPEG, PNG, WebP, MP4, WebM
+                        Supports JPEG, PNG, WebP
                       </p>
                     </div>
                   </div>
@@ -279,7 +277,7 @@ const CameraCapture = () => {
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="image/*,video/*"
+                  accept="image/*"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -341,22 +339,16 @@ const CameraCapture = () => {
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
                             <div className="relative">
-                              {file.type === 'image' ? (
-                                <img
-                                  src={file.url}
-                                  alt={file.name}
-                                  className="w-16 h-16 object-cover rounded-lg"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
-                                  <Video className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                              )}
+                              <img
+                                src={file.url}
+                                alt={file.name}
+                                className="w-16 h-16 object-cover rounded-lg"
+                              />
                               <Badge 
-                                variant={file.type === 'image' ? 'success' : 'finance'}
+                                variant="success"
                                 className="absolute -top-2 -right-2 text-xs"
                               >
-                                {file.type}
+                                image
                               </Badge>
                             </div>
                             
@@ -403,7 +395,6 @@ const CameraCapture = () => {
                   <li>• Avoid shadows and glare on the receipt</li>
                   <li>• Include the entire receipt in the frame</li>
                   <li>• Multiple angles can improve accuracy</li>
-                  <li>• Videos work great for long receipts</li>
                 </ul>
               </CardContent>
             </Card>

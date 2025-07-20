@@ -8,7 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
 import ReceiptAnalysis from "./pages/ReceiptAnalysis";
 import WalletPass from "./pages/WalletPass";
-import VoiceAssistant from "./pages/VoiceAssistant";
+
 import Dashboard from "./pages/Dashboard";
 import AiChat from "./pages/AiChat";
 import CameraCapture from "./pages/CameraCapture";
@@ -32,7 +32,6 @@ const App = () => (
                 <Route path="/chat" element={<AiChat />} />
                 <Route path="/analysis" element={<ReceiptAnalysis />} />
                 <Route path="/wallet-pass" element={<WalletPass />} />
-                <Route path="/voice" element={<VoiceAssistant />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

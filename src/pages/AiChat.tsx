@@ -18,7 +18,8 @@ import {
   Calendar,
   Lightbulb,
   Receipt,
-  PieChart
+  PieChart,
+  Mic
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -216,6 +217,18 @@ const AiChat = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(input)}
               className="flex-1"
             />
+            <Button 
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                toast({
+                  title: "Voice Input",
+                  description: "Voice recognition would activate here in production",
+                });
+              }}
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
             <Button 
               onClick={() => handleSendMessage(input)}
               disabled={!input.trim() || isLoading}

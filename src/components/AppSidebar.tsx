@@ -49,12 +49,6 @@ const menuItems = [
     description: "Ask anything about your expenses"
   },
   {
-    title: "Voice Assistant",
-    url: "/voice",
-    icon: Mic,
-    description: "Voice-powered analytics"
-  },
-  {
     title: "Dashboard",
     url: "/dashboard",
     icon: BarChart3,
