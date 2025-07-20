@@ -2,26 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Video, Radio, Zap, Brain, Wallet, ChevronDown } from "lucide-react";
+import { Camera, Zap, Brain, Wallet, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleUpload = async (type: string) => {
-    setIsUploading(true);
-    toast({
-      title: "Analyzing your receipt with Gemini AI...",
-      description: "Please wait while we extract the details from your receipt.",
-    });
-
-    // Simulate AI processing
-    setTimeout(() => {
-      setIsUploading(false);
-      navigate("/analysis");
-    }, 3000);
+  const handleCaptureUpload = () => {
+    navigate("/capture");
   };
 
   const scrollToProcess = () => {
@@ -61,41 +50,23 @@ const Index = () => {
           </p>
 
           {/* Upload Options */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => handleUpload("image")}>
+          <div className="flex justify-center mb-12">
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group max-w-md" onClick={handleCaptureUpload}>
               <CardHeader className="text-center">
                 <Camera className="h-12 w-12 text-primary mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                <CardTitle>📸 Capture / Upload Image</CardTitle>
-                <CardDescription>Upload a photo of your receipt</CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => handleUpload("video")}>
-              <CardHeader className="text-center">
-                <Video className="h-12 w-12 text-finance mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                <CardTitle>🎥 Upload Video</CardTitle>
-                <CardDescription>Upload a video of your receipt</CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => handleUpload("live")}>
-              <CardHeader className="text-center">
-                <Radio className="h-12 w-12 text-warning mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                <CardTitle>📡 Go Live</CardTitle>
-                <CardDescription>Live stream for demo</CardDescription>
+                <CardTitle>📸 Capture / Upload Photo</CardTitle>
+                <CardDescription>Take a photo or upload an image of your receipt</CardDescription>
               </CardHeader>
             </Card>
           </div>
 
-          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button 
               variant="gradient" 
               size="lg" 
-              onClick={() => handleUpload("demo")}
-              disabled={isUploading}
+              onClick={handleCaptureUpload}
             >
-              {isUploading ? "Processing..." : "Try with a Receipt"}
+              Try with a Receipt
             </Button>
             <Button variant="outline" size="lg" onClick={scrollToProcess}>
               See How it Works
