@@ -26,8 +26,10 @@ import {
   Settings,
   HelpCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
   {
@@ -85,6 +87,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
+  const { user, logout } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = state === "collapsed";
@@ -161,7 +164,27 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-2">
+      <SidebarFooter className="border-t p-2 space-y-2">
+        {!isCollapsed && user && (
+          <div className="px-2 py-1 text-sm text-muted-foreground">
+            Welcome, {user.name}
+          </div>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={logout}
+          className="w-full"
+        >
+          {isCollapsed ? (
+            <LogOut className="h-4 w-4" />
+          ) : (
+            <>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </>
+          )}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
