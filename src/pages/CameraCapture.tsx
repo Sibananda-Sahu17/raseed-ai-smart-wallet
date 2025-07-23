@@ -147,22 +147,134 @@ const CameraCapture = () => {
     setIsProcessing(true);
     setUploadProgress(0);
 
-    // Simulate processing
-    for (let i = 0; i <= 100; i += 10) {
-      setTimeout(() => {
-        setUploadProgress(i);
-      }, i * 30);
-    }
+    try {
+      for (let i = 0; i < capturedFiles.length; i++) {
+        const file = capturedFiles[i];
+        console.log(file);
 
-    setTimeout(() => {
-      setIsProcessing(false);
+        // Request upload URL from backend
+        const response = await fetch(
+          "http://localhost:8000/api/v1/storage/generate-upload-url",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: "example-user-id", // replace with your user id
+              filename: file.name,
+              file_type: "receipt",
+              content_type: "image/jpeg",
+              expires_in_minutes: 60,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+        }
+
+        const { upload_url } = await response.json();
+
+        // Upload file to the signed URL
+        await uploadFileToSignedUrl(file, upload_url);
+
+        // Update progress
+        setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
+      }
+
       toast({
         title: "Processing Complete!",
         description: "Your receipts have been analyzed successfully.",
       });
       navigate("/analysis");
-    }, 3500);
+    } catch (error) {
+      console.error("Error processing files:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process files. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  // Upload a single file to the given upload URL
+  const uploadFileToSignedUrl = async (file: CapturedFile, uploadUrl: string) => {
+    // Fetch the Blob from the object URL
+    
+    const res = await fetch(file.url);
+    const blob = await res.blob();
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "image/jpeg", // match content-type from generate-upload-url
+      },
+      body: blob,
+    });
+  
+    if (!response.ok) {
+      throw new Error(`Failed to upload file: ${file.name}`);
+    }
+  
+    console.log(`Uploaded ${file.name} successfully.`);
+  };
+
+
+  // const processFiles = async () => {
+  //   if (capturedFiles.length === 0) return;
+  
+  //   setIsProcessing(true);
+  //   setUploadProgress(0);
+  
+  //   try {
+  //     for (let i = 0; i < capturedFiles.length; i++) {
+  //       const file = capturedFiles[i];
+  
+  //       // Call the backend to generate the upload URL
+  //       const response = await fetch("http://localhost:8000/api/v1/storage/generate-upload-url", {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           user_id: "example-user-id", // Replace with actual user ID
+  //           filename: file.name,
+  //           file_type: "receipt",
+  //           content_type: "image/jpeg",
+  //           expires_in_minutes: 60,
+  //         }),
+  //       });
+  
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+  //       }
+  
+  //       const { upload_url, file_path } = await response.json();
+  
+  //       console.log(`Generated upload URL for ${file.name}:`, upload_url);
+  //       console.log(`File path for ${file.name}:`, file_path);
+  
+  //       // Simulate processing progress
+  //       setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
+  //     }
+  
+  //     toast({
+  //       title: "Processing Complete!",
+  //       description: "Your receipts have been analyzed successfully.",
+  //     });
+  //     navigate("/analysis");
+  //   } catch (error) {
+  //     console.error("Error processing files:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to process files. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
