@@ -143,54 +143,87 @@ const CameraCapture = () => {
 
   const processFiles = async () => {
     if (capturedFiles.length === 0) return;
-
+  
     setIsProcessing(true);
     setUploadProgress(0);
-
+  
+    const userId = JSON.parse(localStorage.getItem('user'))?.email?.split('@')[0];
+  
     try {
       for (let i = 0; i < capturedFiles.length; i++) {
         const file = capturedFiles[i];
-        console.log(file);
-
-        // Request upload URL from backend
-        const response = await fetch(
+  
+        // Get upload URL from backend
+        const urlResponse = await fetch(
           "http://localhost:8000/api/v1/storage/generate-upload-url",
           {
             method: "POST",
+            credentials: "include", // Important: send HttpOnly cookie
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              user_id: "example-user-id", // replace with your user id
+              user_id: userId,
               filename: file.name,
               file_type: "receipt",
-              content_type: "image/jpeg",
+              content_type: "image/jpeg", // Adjust if file has different type
               expires_in_minutes: 60,
             }),
           }
         );
-
-        if (!response.ok) {
-          throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+        if (!urlResponse.ok) {
+          throw new Error(`Failed to generate upload URL for ${file.name}`);
         }
-
-        const { upload_url } = await response.json();
-
-        // Upload file to the signed URL
-        await uploadFileToSignedUrl(file, upload_url);
-
+        const { upload_url, file_path } = await urlResponse.json();
+  
+        // Upload the file to the signed URL
+        const res = await fetch(file.url);
+        const blob = await res.blob();
+  
+        const uploadResponse = await fetch(upload_url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "image/jpeg",
+          },
+          body: blob,
+        });
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload file: ${file.name}`);
+        }
+  
+        // Step 3: Notify backend to save file metadata
+        const saveResponse = await fetch(
+          "http://localhost:8000/api/v1/storage/save-file-metadata",
+          {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: userId,
+              file_name: file.name,
+              file_path: file_path,
+              content_type: "image/jpeg",
+              created_at: new Date().toISOString(),
+              receipt_date: new Date().toISOString(), // or real receipt date if available
+            }),
+          }
+        );
+        if (!saveResponse.ok) {
+          throw new Error(`Failed to save metadata for file: ${file.name}`);
+        }
+  
         // Update progress
         setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
       }
-
+  
       toast({
-        title: "Processing Complete!",
-        description: "Your receipts have been analyzed successfully.",
+        title: "Upload Complete",
+        description: "All receipts uploaded and metadata saved successfully.",
       });
       navigate("/analysis");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing files:", error);
       toast({
         title: "Error",
-        description: "Failed to process files. Please try again.",
+        description: error.message || "Failed to process files. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -198,27 +231,92 @@ const CameraCapture = () => {
     }
   };
 
-  // Upload a single file to the given upload URL
-  const uploadFileToSignedUrl = async (file: CapturedFile, uploadUrl: string) => {
-    // Fetch the Blob from the object URL
-    
-    const res = await fetch(file.url);
-    const blob = await res.blob();
+  
 
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "image/jpeg", // match content-type from generate-upload-url
-      },
-      body: blob,
-    });
+  // const processFiles = async () => {
+  //   if (capturedFiles.length === 0) return;
+
+  //   setIsProcessing(true);
+  //   setUploadProgress(0);
+    
+  //   const user = JSON.parse(localStorage.getItem('user'))?.email?.split('@')[0];
+  //   const token = localStorage.getItem('token');
+
+  //   try {
+  //     for (let i = 0; i < capturedFiles.length; i++) {
+  //       const file = capturedFiles[i];
+  //       console.log(file);
+
+  //       // Request upload URL from backend
+  //       const response = await fetch(
+  //         "http://localhost:8000/api/v1/storage/generate-upload-url",
+  //         {
+  //           method: "POST",
+  //           headers: {
+  //             "Content-Type": "application/json"
+  //           },
+  //           body: JSON.stringify({
+  //             user: user,
+  //             filename: file.name,
+  //             file_type: "receipt",
+  //             content_type: "image/jpeg",
+  //             expires_in_minutes: 60,
+  //           }),
+  //         }
+  //       );
+
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+  //       }
+
+  //       const { upload_url } = await response.json();
+
+  //       // Upload file to the signed URL
+  //       await uploadFileToSignedUrl(file, upload_url);
+
+  //       // Update progress
+  //       setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
+  //     }
+
+  //     toast({
+  //       title: "Processing Complete!",
+  //       description: "Your receipts have been analyzed successfully.",
+  //     });
+  //     navigate("/analysis");
+  //   } catch (error) {
+  //     console.error("Error processing files:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to process files. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
+
+  // Upload a single file to the given upload URL
+  // const uploadFileToSignedUrl = async (file: CapturedFile, uploadUrl: string) => {
+  //   // Fetch the Blob from the object URL
+    
+  //   const res = await fetch(file.url);
+  //   const blob = await res.blob();
+  //   const token = localStorage.getItem('token');
+
+  //   const response = await fetch(uploadUrl, {
+  //     method: "PUT",
+  //     headers: {
+  //       "Content-Type": "image/jpeg", // match content-type from generate-upload-url
+  //     },
+  //     body: blob,
+  //   });
   
-    if (!response.ok) {
-      throw new Error(`Failed to upload file: ${file.name}`);
-    }
+  //   if (!response.ok) {
+  //     throw new Error(`Failed to upload file: ${file.name}`);
+  //   }
   
-    console.log(`Uploaded ${file.name} successfully.`);
-  };
+  //   console.log(`Uploaded ${file.name} successfully.`);
+  // };
 
 
   // const processFiles = async () => {
