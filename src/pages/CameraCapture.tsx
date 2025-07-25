@@ -148,15 +148,27 @@ const CameraCapture = () => {
     setIsProcessing(true);
     setUploadProgress(0);
   
-    const userId = JSON.parse(localStorage.getItem('user'))?.email?.split('@')[0];
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user?.email?.split('@')[0];
+  
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User information not found. Please login again.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    console.log(`Starting upload process for ${capturedFiles.length} files`);
   
     try {
       for (let i = 0; i < capturedFiles.length; i++) {
         const file = capturedFiles[i];
-        console.log(file);
+        console.log(`Processing file ${i + 1}/${capturedFiles.length}:`, file.name);
 
         const data = {
-          user_id: userId, // replace with your user id
           filename: file.name,
           file_type: "receipt",
           content_type: "image/jpeg",
@@ -164,26 +176,39 @@ const CameraCapture = () => {
         }
 
         // Request upload URL from backend
+        console.log('Requesting upload URL for:', data);
         const response = await generateUploadUrl(data);
 
-        if (!response.ok) {
-          throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+        if (response.status !== 200) {
+          throw new Error(`Failed to generate upload URL for file: ${file.name}. Status: ${response.status}`);
         }
 
-        const { upload_url } = await response.json();
+        const { upload_url } = response.data;
+        console.log('Generated upload URL for:', file.name);
+
+        // Convert file URL to blob
+        const fileBlob = await fetch(file.url).then(res => {
+          if (!res.ok) {
+            throw new Error(`Failed to fetch file blob: ${res.statusText}`);
+          }
+          return res.blob();
+        });
 
         // Upload file to the signed URL
-        const fileBlob = await fetch(file.url).then(res => res.blob());
-        await uploadFileToSignedUrl(fileBlob, upload_url).then(res => {
-          console.log("uploaded file to signed url", res);
-        }).catch(err => {
-          console.error("Error uploading file to signed url", err);
-        });
+        console.log(`Uploading ${file.name} to signed URL...`);
+        const uploadResponse = await uploadFileToSignedUrl(fileBlob, upload_url, "image/jpeg");
+        
+        if (uploadResponse.status !== 200) {
+          throw new Error(`Failed to upload ${file.name} to cloud storage. Status: ${uploadResponse.status}`);
+        }
+        
+        console.log(`Successfully uploaded ${file.name} to cloud storage`);
 
         // Update progress
         setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
       }
   
+      console.log('All files uploaded successfully');
       toast({
         title: "Upload Complete",
         description: "All receipts uploaded and metadata saved successfully.",
@@ -191,9 +216,23 @@ const CameraCapture = () => {
       navigate("/analysis");
     } catch (error: any) {
       console.error("Error processing files:", error);
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to process files. Please try again.";
+      
+      if (error.message?.includes('Network Error') || error.code === 'ERR_NETWORK') {
+        errorMessage = "Network error. Please check your connection and backend server.";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Authentication failed. Please login again.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to process files. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
