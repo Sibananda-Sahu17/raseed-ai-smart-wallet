@@ -144,17 +144,19 @@ const CameraCapture = () => {
 
   const processFiles = async () => {
     if (capturedFiles.length === 0) return;
-
+  
     setIsProcessing(true);
     setUploadProgress(0);
-
+  
+    const userId = JSON.parse(localStorage.getItem('user'))?.email?.split('@')[0];
+  
     try {
       for (let i = 0; i < capturedFiles.length; i++) {
         const file = capturedFiles[i];
         console.log(file);
 
         const data = {
-          user_id: "example-user-id", // replace with your user id
+          user_id: userId, // replace with your user id
           filename: file.name,
           file_type: "receipt",
           content_type: "image/jpeg",
@@ -181,23 +183,110 @@ const CameraCapture = () => {
         // Update progress
         setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
       }
-
+  
       toast({
-        title: "Processing Complete!",
-        description: "Your receipts have been analyzed successfully.",
+        title: "Upload Complete",
+        description: "All receipts uploaded and metadata saved successfully.",
       });
       navigate("/analysis");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing files:", error);
       toast({
         title: "Error",
-        description: "Failed to process files. Please try again.",
+        description: error.message || "Failed to process files. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
   };
+
+  
+
+  // const processFiles = async () => {
+  //   if (capturedFiles.length === 0) return;
+
+  //   setIsProcessing(true);
+  //   setUploadProgress(0);
+    
+  //   const user = JSON.parse(localStorage.getItem('user'))?.email?.split('@')[0];
+  //   const token = localStorage.getItem('token');
+
+  //   try {
+  //     for (let i = 0; i < capturedFiles.length; i++) {
+  //       const file = capturedFiles[i];
+  //       console.log(file);
+
+  //       // Request upload URL from backend
+  //       const response = await fetch(
+  //         "http://localhost:8000/api/v1/storage/generate-upload-url",
+  //         {
+  //           method: "POST",
+  //           headers: {
+  //             "Content-Type": "application/json"
+  //           },
+  //           body: JSON.stringify({
+  //             user: user,
+  //             filename: file.name,
+  //             file_type: "receipt",
+  //             content_type: "image/jpeg",
+  //             expires_in_minutes: 60,
+  //           }),
+  //         }
+  //       );
+
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to generate upload URL for file: ${file.name}`);
+  //       }
+
+  //       const { upload_url } = await response.json();
+
+  //       // Upload file to the signed URL
+  //       await uploadFileToSignedUrl(file, upload_url);
+
+  //       // Update progress
+  //       setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
+  //     }
+
+  //     toast({
+  //       title: "Processing Complete!",
+  //       description: "Your receipts have been analyzed successfully.",
+  //     });
+  //     navigate("/analysis");
+  //   } catch (error) {
+  //     console.error("Error processing files:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to process files. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
+
+  // Upload a single file to the given upload URL
+  // const uploadFileToSignedUrl = async (file: CapturedFile, uploadUrl: string) => {
+  //   // Fetch the Blob from the object URL
+    
+  //   const res = await fetch(file.url);
+  //   const blob = await res.blob();
+  //   const token = localStorage.getItem('token');
+
+  //   const response = await fetch(uploadUrl, {
+  //     method: "PUT",
+  //     headers: {
+  //       "Content-Type": "image/jpeg", // match content-type from generate-upload-url
+  //     },
+  //     body: blob,
+  //   });
+  
+  //   if (!response.ok) {
+  //     throw new Error(`Failed to upload file: ${file.name}`);
+  //   }
+  
+  //   console.log(`Uploaded ${file.name} successfully.`);
+  // };
 
 
   // const processFiles = async () => {
