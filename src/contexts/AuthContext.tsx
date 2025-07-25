@@ -13,6 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, name: string, password: string) => Promise<{ success: boolean; error?: string }>;
   googleLogin: () => void;
   logout: () => void;
   isLoading: boolean;
@@ -74,6 +75,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Email/password signup
+  const signup = async (email: string, name: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+
+    try {
+      const resp = await axios.post("http://localhost:8000/api/v1/auth/email-signup", {
+        email,
+        name,
+        password,
+      });
+
+      if (resp.status === 200) {
+        const data = resp.data;
+        setUser(data.user);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+        setIsLoading(false);
+        return { success: true };
+      } else {
+        setIsLoading(false);
+        return { success: false };
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      
+      if (error.response?.status === 409) {
+        return { success: false, error: "An account with this email already exists. Please sign in instead." };
+      } else if (error.response?.data?.detail) {
+        console.error("Signup error:", error.response.data.detail);
+        return { success: false, error: error.response.data.detail };
+      } else {
+        console.error("Signup error:", error);
+        return { success: false, error: "Failed to create account. Please try again." };
+      }
+    }
+  };
+
   // Google OAuth login
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -107,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, googleLogin, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, signup, googleLogin, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
