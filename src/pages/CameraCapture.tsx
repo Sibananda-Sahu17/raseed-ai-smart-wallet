@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateUploadUrl, uploadFileToSignedUrl } from "@/api/storage";
+import { createRawReceipt } from "@/api/receipt";
 
 interface CapturedFile {
   id: string;
@@ -183,7 +184,7 @@ const CameraCapture = () => {
           throw new Error(`Failed to generate upload URL for file: ${file.name}. Status: ${response.status}`);
         }
 
-        const { upload_url } = response.data;
+        const { upload_url, file_path } = response.data;
         console.log('Generated upload URL for:', file.name);
 
         // Convert file URL to blob
@@ -204,14 +205,32 @@ const CameraCapture = () => {
         
         console.log(`Successfully uploaded ${file.name} to cloud storage`);
 
+        // Save receipt reference to database
+        console.log(`Saving receipt reference to database for ${file.name}...`);
+        const receiptData = {
+          filename: file.name,
+          file_type: "image",
+          content_type: "image/jpeg",
+          file_size: fileBlob.size,
+          file_path: file_path
+        };
+
+        const receiptResponse = await createRawReceipt(receiptData);
+        
+        if (receiptResponse.status !== 201) {
+          throw new Error(`Failed to save receipt reference for ${file.name}. Status: ${receiptResponse.status}`);
+        }
+        
+        console.log(`Successfully saved receipt reference for ${file.name}`, receiptResponse.data);
+
         // Update progress
         setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
       }
   
-      console.log('All files uploaded successfully');
+      console.log('All files uploaded and saved to database successfully');
       toast({
         title: "Upload Complete",
-        description: "All receipts uploaded and metadata saved successfully.",
+        description: "All receipts uploaded to cloud storage and saved to database successfully.",
       });
       navigate("/analysis");
     } catch (error: any) {
