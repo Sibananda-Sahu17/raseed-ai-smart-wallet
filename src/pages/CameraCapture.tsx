@@ -17,6 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generateUploadUrl, uploadFileToSignedUrl } from "@/api/storage";
 
 interface CapturedFile {
   id: string;
@@ -152,21 +153,16 @@ const CameraCapture = () => {
         const file = capturedFiles[i];
         console.log(file);
 
+        const data = {
+          user_id: "example-user-id", // replace with your user id
+          filename: file.name,
+          file_type: "receipt",
+          content_type: "image/jpeg",
+          expires_in_minutes: 60,
+        }
+
         // Request upload URL from backend
-        const response = await fetch(
-          "http://localhost:8000/api/v1/storage/generate-upload-url",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              user_id: "example-user-id", // replace with your user id
-              filename: file.name,
-              file_type: "receipt",
-              content_type: "image/jpeg",
-              expires_in_minutes: 60,
-            }),
-          }
-        );
+        const response = await generateUploadUrl(data);
 
         if (!response.ok) {
           throw new Error(`Failed to generate upload URL for file: ${file.name}`);
@@ -175,7 +171,12 @@ const CameraCapture = () => {
         const { upload_url } = await response.json();
 
         // Upload file to the signed URL
-        await uploadFileToSignedUrl(file, upload_url);
+        const fileBlob = await fetch(file.url).then(res => res.blob());
+        await uploadFileToSignedUrl(fileBlob, upload_url).then(res => {
+          console.log("uploaded file to signed url", res);
+        }).catch(err => {
+          console.error("Error uploading file to signed url", err);
+        });
 
         // Update progress
         setUploadProgress(Math.round(((i + 1) / capturedFiles.length) * 100));
@@ -196,28 +197,6 @@ const CameraCapture = () => {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // Upload a single file to the given upload URL
-  const uploadFileToSignedUrl = async (file: CapturedFile, uploadUrl: string) => {
-    // Fetch the Blob from the object URL
-    
-    const res = await fetch(file.url);
-    const blob = await res.blob();
-
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "image/jpeg", // match content-type from generate-upload-url
-      },
-      body: blob,
-    });
-  
-    if (!response.ok) {
-      throw new Error(`Failed to upload file: ${file.name}`);
-    }
-  
-    console.log(`Uploaded ${file.name} successfully.`);
   };
 
 
