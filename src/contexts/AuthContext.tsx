@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const resp = await appSignup(email, name, password);
 
-      if (resp.status === 200) {
+      if (resp.status === 201) {
         const data = resp.data;
         setUser(data.user);
         localStorage.setItem("user", JSON.stringify(data.user));
