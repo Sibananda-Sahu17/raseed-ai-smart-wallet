@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useGoogleLogin, googleLogout } from "@react-oauth/google";
 import axios from "axios";
+import { appGoogleLogin, appLogin, appSignup } from "@/api/auth";
 
 interface User {
   id: string;
@@ -48,10 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
 
     try {
-      const resp = await axios.post("http://localhost:8000/api/v1/auth/email-login", {
-        email,
-        password,
-      });
+      
+      const resp = await appLogin(email, password);
 
       if (resp.status === 200) {
         const data = resp.data;
@@ -80,11 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
 
     try {
-      const resp = await axios.post("http://localhost:8000/api/v1/auth/email-signup", {
-        email,
-        name,
-        password,
-      });
+      const resp = await appSignup(email, name, password);
 
       if (resp.status === 200) {
         const data = resp.data;
@@ -117,9 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
       try {
-        const resp = await axios.post("http://localhost:8000/api/v1/auth/google-login", {
-          access_token: tokenResponse.access_token,
-        });
+        const resp = await appGoogleLogin(tokenResponse.access_token);
 
         setUser(resp.data.user);
         localStorage.setItem("user", JSON.stringify(resp.data.user));
