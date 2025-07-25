@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useGoogleLogin, googleLogout } from "@react-oauth/google";
-import axios from "axios";
 import { appGoogleLogin, appLogin, appSignup } from "@/api/auth";
 
 interface User {
