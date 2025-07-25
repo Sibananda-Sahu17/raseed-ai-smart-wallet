@@ -1,6 +1,5 @@
 import { API_URL_V1 } from "../constants/staticUrls";
-import { AXIOS_INSTANCE_BASE } from "./_interceptor/_axios";
-
+import { AXIOS_INSTANCE } from "./_interceptor/_axios";
 
 
 interface CreateRawReceiptData {
@@ -12,5 +11,5 @@ interface CreateRawReceiptData {
 }
 
 export const createRawReceipt = async (data: CreateRawReceiptData) => {
-    return AXIOS_INSTANCE_BASE.post(`/receipt/create-raw-receipt`, data);
+    return AXIOS_INSTANCE.post(`/receipt/create-raw-receipt`, data);
 };
